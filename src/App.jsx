@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-
+import Dashboard from "./pages/Dashboard/Dashboard";
 function App() {
 
   useEffect(() => {
@@ -11,7 +11,7 @@ function App() {
 
   return (
     <div>
-      <h1>EventSync Admin</h1>
+      <Dashboard />
     </div>
   );
 }

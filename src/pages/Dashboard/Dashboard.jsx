@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { eventApi } from "../../api/event.api";
 import { speakerApi } from "../../api/speaker.api";
+import { Link } from "react-router-dom";
 
 import StatCard from "./components/StatsCard";
 import EventsTable from "./components/EventsTable";
@@ -36,9 +37,12 @@ export default function Dashboard() {
   }, 0);
 
   return (
+    
     <div style={{ padding: 20 }}>
       <h1>Dashboard EventSync</h1>
-
+        <Link to="/events">
+            Voir les évènements
+        </Link>
       {/* STATS */}
       <div style={{ display: "flex", gap: 16 }}>
         <StatCard title="Événements" value={events.length} />

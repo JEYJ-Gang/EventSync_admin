@@ -1,25 +1,104 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { eventApi } from "../../api/event.api";
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
+
   const [isReady, setIsReady] = useState(false);
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [apiError, setApiError] = useState("");
 
   useEffect(() => {
     const token = localStorage.getItem("token");
 
     if (!token) {
-      window.location.href = "/login";
+      navigate("/login", { replace: true });
       return;
     }
 
     setIsReady(true);
-  }, []);
+  }, [navigate]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    async function loadDashboardData() {
+      try {
+        setLoading(true);
+        setApiError("");
+
+        const response = await eventApi.getAll();
+
+        const normalizedEvents = Array.isArray(response)
+          ? response
+          : response?.data || response?.events || [];
+
+        setEvents(normalizedEvents);
+      } catch (error) {
+        console.error("Erreur chargement dashboard :", error);
+        setApiError("Impossible de charger les données du dashboard.");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadDashboardData();
+  }, [isReady]);
 
   const handleLogout = () => {
     localStorage.removeItem("token");
-    window.location.href = "/login";
+    navigate("/login", { replace: true });
   };
 
-  if (!isReady) {
+  const stats = useMemo(() => {
+    const totalEvents = events.length;
+
+    const allSessions = events.flatMap((event) => event.sessions || []);
+
+    const totalSessions = allSessions.length;
+
+    const liveSessions = allSessions.filter((session) => {
+      if (typeof session.is_live === "boolean") {
+        return session.is_live;
+      }
+
+      if (!session.start_time || !session.end_time) {
+        return false;
+      }
+
+      const now = new Date();
+      const start = new Date(session.start_time);
+      const end = new Date(session.end_time);
+
+      return start <= now && now <= end;
+    }).length;
+
+    const speakerIds = new Set();
+
+    allSessions.forEach((session) => {
+      const speakers = session.speakers || session.session_speakers || [];
+
+      speakers.forEach((speakerItem) => {
+        const speaker = speakerItem.speaker || speakerItem;
+        const speakerId = speaker.id || speaker.id_speaker || speaker.name;
+
+        if (speakerId) {
+          speakerIds.add(speakerId);
+        }
+      });
+    });
+
+    return {
+      totalEvents,
+      totalSessions,
+      totalSpeakers: speakerIds.size,
+      liveSessions,
+    };
+  }, [events]);
+
+  if (!isReady || loading) {
     return (
       <main style={loadingPage}>
         <div style={loaderBox}>
@@ -42,11 +121,25 @@ export default function DashboardPage() {
           </div>
 
           <nav style={nav}>
-            <button style={navItemActive}>Dashboard</button>
-            <button style={navItem}>Événements</button>
-            <button style={navItem}>Sessions</button>
-            <button style={navItem}>Intervenants</button>
-            <button style={navItem}>Salles</button>
+            <button style={navItemActive} onClick={() => navigate("/dashboard")}>
+              Dashboard
+            </button>
+
+            <button style={navItem} onClick={() => navigate("/events")}>
+              Événements
+            </button>
+
+            <button style={navItem} onClick={() => navigate("/sessions")}>
+              Sessions
+            </button>
+
+            <button style={navItem} onClick={() => navigate("/speakers")}>
+              Intervenants
+            </button>
+
+            <button style={navItem} onClick={() => navigate("/rooms")}>
+              Salles
+            </button>
           </nav>
         </div>
 
@@ -66,186 +159,217 @@ export default function DashboardPage() {
       </aside>
 
       <section style={content}>
-        <header style={header}>
-          <div>
-            <p style={eyebrow}>Espace organisateur</p>
-            <h1 style={title}>Dashboard</h1>
-            <p style={subtitle}>
-              Gérez les événements, les sessions, les intervenants et les salles depuis une interface claire.
-            </p>
-          </div>
-
-          <div style={headerActions}>
-            <button style={secondaryHeaderButton}>Voir le site public</button>
-            <button style={primaryButton}>+ Nouvel événement</button>
-          </div>
-        </header>
-
-        <section style={statsGrid}>
-          <DashboardCard
-            number="03"
-            label="Événements"
-            description="Événements créés"
-            tone="blue"
-          />
-
-          <DashboardCard
-            number="12"
-            label="Sessions"
-            description="Sessions programmées"
-            tone="purple"
-          />
-
-          <DashboardCard
-            number="05"
-            label="Intervenants"
-            description="Profils publics"
-            tone="green"
-          />
-
-          <DashboardCard
-            number="02"
-            label="Live"
-            description="Sessions en cours"
-            tone="red"
-            live
-          />
-        </section>
-
-        <section style={mainGrid}>
-          <div style={leftColumn}>
-            <section style={panel}>
-              <div style={panelHeader}>
-                <div>
-                  <h2 style={panelTitle}>Actions rapides</h2>
-                  <p style={panelText}>
-                    Les raccourcis essentiels pour administrer la plateforme.
-                  </p>
-                </div>
-              </div>
-
-              <div style={actionsGrid}>
-                <ActionCard
-                  title="Créer un événement"
-                  text="Ajouter les informations principales : titre, description, lieu et dates."
-                  tag="Event"
-                />
-
-                <ActionCard
-                  title="Ajouter une session"
-                  text="Définir l’horaire, la salle, la capacité et les intervenants."
-                  tag="Session"
-                />
-
-                <ActionCard
-                  title="Gérer les intervenants"
-                  text="Compléter les profils publics avec bio, photo et liens externes."
-                  tag="Speaker"
-                />
-
-                <ActionCard
-                  title="Organiser les salles"
-                  text="Structurer le planning selon les espaces disponibles."
-                  tag="Room"
-                />
-              </div>
-            </section>
-
-            <section style={panel}>
-              <div style={panelHeader}>
-                <div>
-                  <h2 style={panelTitle}>Événements récents</h2>
-                  <p style={panelText}>
-                    Aperçu des derniers événements administrés.
-                  </p>
-                </div>
-
-                <button style={smallButton}>Tout voir</button>
-              </div>
-
-              <div style={table}>
-                <div style={tableHead}>
-                  <span>Événement</span>
-                  <span>Lieu</span>
-                  <span>Statut</span>
-                  <span>Actions</span>
-                </div>
-
-                <EventRow
-                  name="Tech Conference 2026"
-                  place="Antananarivo"
-                  status="Publié"
-                />
-
-                <EventRow
-                  name="Workshop Marketing"
-                  place="Ivandry"
-                  status="Brouillon"
-                />
-
-                <EventRow
-                  name="Forum Digital"
-                  place="Toamasina"
-                  status="Publié"
-                />
-              </div>
-            </section>
-          </div>
-
-          <aside style={rightColumn}>
-            <section style={panel}>
-              <div style={panelHeader}>
-                <div>
-                  <h2 style={panelTitle}>État du projet</h2>
-                  <p style={panelText}>
-                    Avancement des fonctionnalités demandées.
-                  </p>
-                </div>
-              </div>
-
-              <div style={activityList}>
-                <ActivityItem
-                  title="Planning public"
-                  status="Disponible"
-                  progress="100%"
-                />
-
-                <ActivityItem
-                  title="Login admin"
-                  status="Fonctionnel"
-                  progress="85%"
-                />
-
-                <ActivityItem
-                  title="Questions live"
-                  status="À connecter"
-                  progress="45%"
-                />
-
-                <ActivityItem
-                  title="Pages speakers"
-                  status="À finaliser"
-                  progress="60%"
-                />
-
-                <ActivityItem
-                  title="Favoris navigateur"
-                  status="À faire"
-                  progress="30%"
-                />
-              </div>
-            </section>
-
-            <section style={highlightPanel}>
-              <p style={highlightLabel}>Session live</p>
-              <h3 style={highlightTitle}>02 sessions en cours</h3>
-              <p style={highlightText}>
-                Les participants peuvent identifier les sessions actives et interagir avec les questions.
+        <div style={contentInner}>
+          <header style={header}>
+            <div>
+              <p style={eyebrow}>Espace organisateur</p>
+              <h1 style={title}>Dashboard</h1>
+              <p style={subtitle}>
+                Gérez les événements, les sessions, les intervenants et les salles depuis une interface claire.
               </p>
-              <button style={highlightButton}>Voir les sessions</button>
-            </section>
-          </aside>
-        </section>
+            </div>
+
+            <div style={headerActions}>
+              <button
+                style={secondaryHeaderButton}
+                onClick={() => window.open("http://localhost:3000", "_blank")}
+              >
+                Voir le site public
+              </button>
+
+              <button
+                style={primaryButton}
+                onClick={() => navigate("/events/new")}
+              >
+                + Nouvel événement
+              </button>
+            </div>
+          </header>
+
+          {apiError && <div style={errorBanner}>{apiError}</div>}
+
+          <section style={statsGrid}>
+            <DashboardCard
+              number={formatNumber(stats.totalEvents)}
+              label="Événements"
+              description="Événements créés"
+              tone="blue"
+            />
+
+            <DashboardCard
+              number={formatNumber(stats.totalSessions)}
+              label="Sessions"
+              description="Sessions programmées"
+              tone="purple"
+            />
+
+            <DashboardCard
+              number={formatNumber(stats.totalSpeakers)}
+              label="Intervenants"
+              description="Profils publics"
+              tone="green"
+            />
+
+            <DashboardCard
+              number={formatNumber(stats.liveSessions)}
+              label="Live"
+              description="Sessions en cours"
+              tone="red"
+              live
+            />
+          </section>
+
+          <section style={mainGrid}>
+            <div style={leftColumn}>
+              <section style={panel}>
+                <div style={panelHeader}>
+                  <div>
+                    <h2 style={panelTitle}>Actions rapides</h2>
+                    <p style={panelText}>
+                      Les raccourcis essentiels pour administrer la plateforme.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={actionsGrid}>
+                  <ActionCard
+                    title="Créer un événement"
+                    text="Ajouter le titre, la description, le lieu et les dates."
+                    tag="Event"
+                    onClick={() => navigate("/events/new")}
+                  />
+
+                  <ActionCard
+                    title="Gérer les événements"
+                    text="Consulter, modifier ou supprimer les événements existants."
+                    tag="Event"
+                    onClick={() => navigate("/events")}
+                  />
+
+                  <ActionCard
+                    title="Gérer les sessions"
+                    text="Définir les horaires, les salles et les intervenants."
+                    tag="Session"
+                    onClick={() => navigate("/sessions")}
+                  />
+
+                  <ActionCard
+                    title="Gérer les salles"
+                    text="Organiser les rooms utilisées dans les plannings."
+                    tag="Room"
+                    onClick={() => navigate("/rooms")}
+                  />
+                </div>
+              </section>
+
+              <section style={panel}>
+                <div style={panelHeader}>
+                  <div>
+                    <h2 style={panelTitle}>Événements récents</h2>
+                    <p style={panelText}>
+                      Aperçu des derniers événements disponibles dans la base.
+                    </p>
+                  </div>
+
+                  <button style={smallButton} onClick={() => navigate("/events")}>
+                    Tout voir
+                  </button>
+                </div>
+
+                <div style={table}>
+                  <div style={tableHead}>
+                    <span>Événement</span>
+                    <span>Lieu</span>
+                    <span>Date</span>
+                    <span>Actions</span>
+                  </div>
+
+                  {events.length === 0 ? (
+                    <div style={emptyState}>
+                      Aucun événement trouvé. Créez votre premier événement.
+                    </div>
+                  ) : (
+                    events.slice(0, 5).map((event) => {
+                      const eventId = getEventId(event);
+
+                      return (
+                        <EventRow
+                          key={eventId}
+                          name={event.title || "Événement sans titre"}
+                          place={event.location || "Lieu non défini"}
+                          date={event.start_date || event.date_start}
+                          onView={() => navigate(`/events/${eventId}`)}
+                          onEdit={() => navigate(`/events/${eventId}/edit`)}
+                        />
+                      );
+                    })
+                  )}
+                </div>
+              </section>
+            </div>
+
+            <aside style={rightColumn}>
+              <section style={panel}>
+                <div style={panelHeader}>
+                  <div>
+                    <h2 style={panelTitle}>État du projet</h2>
+                    <p style={panelText}>
+                      Avancement des fonctionnalités principales.
+                    </p>
+                  </div>
+                </div>
+
+                <div style={activityList}>
+                  <ActivityItem
+                    title="Login admin"
+                    status="Connecté à l’API"
+                    progress="100%"
+                  />
+
+                  <ActivityItem
+                    title="Dashboard dynamique"
+                    status="Données réelles"
+                    progress="90%"
+                  />
+
+                  <ActivityItem
+                    title="Gestion événements"
+                    status="À finaliser"
+                    progress="70%"
+                  />
+
+                  <ActivityItem
+                    title="Sessions / salles"
+                    status="À connecter"
+                    progress="50%"
+                  />
+
+                  <ActivityItem
+                    title="Questions live"
+                    status="À développer"
+                    progress="35%"
+                  />
+                </div>
+              </section>
+
+              <section style={highlightPanel}>
+                <p style={highlightLabel}>Session live</p>
+                <h3 style={highlightTitle}>
+                  {formatNumber(stats.liveSessions)} session(s) en cours
+                </h3>
+                <p style={highlightText}>
+                  Les sessions live seront visibles par les participants sur l’interface publique.
+                </p>
+                <button
+                  style={highlightButton}
+                  onClick={() => navigate("/sessions")}
+                >
+                  Voir les sessions
+                </button>
+              </section>
+            </aside>
+          </section>
+        </div>
       </section>
     </main>
   );
@@ -288,7 +412,7 @@ function DashboardCard({ number, label, description, tone, live }) {
   );
 }
 
-function ActionCard({ title, text, tag }) {
+function ActionCard({ title, text, tag, onClick }) {
   return (
     <article style={actionCard}>
       <div style={actionTop}>
@@ -298,20 +422,29 @@ function ActionCard({ title, text, tag }) {
       <h3 style={actionTitle}>{title}</h3>
       <p style={actionText}>{text}</p>
 
-      <button style={secondaryButton}>Ouvrir</button>
+      <button style={secondaryButton} onClick={onClick}>
+        Ouvrir
+      </button>
     </article>
   );
 }
 
-function EventRow({ name, place, status }) {
-  const isPublished = status === "Publié";
-
+function EventRow({ name, place, date, onView, onEdit }) {
   return (
     <div style={tableRow}>
       <span style={eventName}>{name}</span>
       <span style={tableText}>{place}</span>
-      <span style={isPublished ? publishedBadge : draftBadge}>{status}</span>
-      <button style={rowButton}>Modifier</button>
+      <span style={tableText}>{formatDate(date)}</span>
+
+      <div style={rowActions}>
+        <button style={rowButtonLight} onClick={onView}>
+          Voir
+        </button>
+
+        <button style={rowButton} onClick={onEdit}>
+          Modifier
+        </button>
+      </div>
     </div>
   );
 }
@@ -335,12 +468,32 @@ function ActivityItem({ title, status, progress }) {
   );
 }
 
+function formatNumber(value) {
+  return String(value || 0).padStart(2, "0");
+}
+
+function getEventId(event) {
+  return event.id || event.id_event || event.event_id;
+}
+
+function formatDate(date) {
+  if (!date) return "Non définie";
+
+  try {
+    return new Date(date).toLocaleDateString("fr-FR");
+  } catch {
+    return "Non définie";
+  }
+}
+
 const page = {
   minHeight: "100vh",
+  width: "100%",
   display: "flex",
   background: "#f4f6fb",
   color: "#111827",
   fontFamily: "Inter, Arial, sans-serif",
+  overflow: "hidden",
 };
 
 const loadingPage = {
@@ -369,14 +522,13 @@ const loaderText = {
 
 const sidebar = {
   width: "280px",
+  minWidth: "280px",
   padding: "28px 22px",
   background: "#ffffff",
   borderRight: "1px solid #e5e7eb",
   display: "flex",
   flexDirection: "column",
   justifyContent: "space-between",
-  position: "sticky",
-  top: 0,
   height: "100vh",
 };
 
@@ -493,8 +645,15 @@ const logoutButton = {
 
 const content = {
   flex: 1,
-  padding: "36px",
-  overflow: "auto",
+  height: "100vh",
+  padding: "32px 42px",
+  overflowY: "auto",
+  overflowX: "hidden",
+};
+
+const contentInner = {
+  maxWidth: "1180px",
+  margin: "0 auto",
 };
 
 const header = {
@@ -516,18 +675,18 @@ const eyebrow = {
 
 const title = {
   margin: "8px 0 8px",
-  fontSize: "42px",
+  fontSize: "40px",
   lineHeight: "1.05",
-  letterSpacing: "-1.4px",
+  letterSpacing: "-1.2px",
   color: "#111827",
 };
 
 const subtitle = {
   margin: 0,
-  maxWidth: "690px",
+  maxWidth: "620px",
   color: "#6b7280",
   fontSize: "16px",
-  lineHeight: "1.6",
+  lineHeight: "1.55",
 };
 
 const headerActions = {
@@ -557,6 +716,16 @@ const secondaryHeaderButton = {
   cursor: "pointer",
 };
 
+const errorBanner = {
+  background: "#fef2f2",
+  color: "#dc2626",
+  border: "1px solid #fecaca",
+  borderRadius: "16px",
+  padding: "14px 16px",
+  marginBottom: "18px",
+  fontWeight: "700",
+};
+
 const statsGrid = {
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
@@ -567,9 +736,10 @@ const statsGrid = {
 const statCard = {
   background: "#ffffff",
   border: "1px solid #e5e7eb",
-  borderRadius: "24px",
+  borderRadius: "22px",
   padding: "22px",
-  boxShadow: "0 16px 36px rgba(15, 23, 42, 0.06)",
+  minHeight: "185px",
+  boxShadow: "0 14px 30px rgba(15, 23, 42, 0.05)",
 };
 
 const statTop = {
@@ -591,7 +761,7 @@ const statIcon = {
 
 const statNumber = {
   display: "block",
-  fontSize: "34px",
+  fontSize: "32px",
   lineHeight: "1",
   fontWeight: "900",
   color: "#111827",
@@ -607,6 +777,7 @@ const statLabel = {
 const statDescription = {
   margin: 0,
   fontSize: "14px",
+  lineHeight: "1.45",
   color: "#6b7280",
 };
 
@@ -621,7 +792,7 @@ const liveBadge = {
 
 const mainGrid = {
   display: "grid",
-  gridTemplateColumns: "minmax(0, 2fr) minmax(320px, 0.9fr)",
+  gridTemplateColumns: "minmax(0, 1.35fr) minmax(320px, 0.85fr)",
   gap: "24px",
 };
 
@@ -640,9 +811,9 @@ const rightColumn = {
 const panel = {
   background: "#ffffff",
   border: "1px solid #e5e7eb",
-  borderRadius: "26px",
+  borderRadius: "24px",
   padding: "24px",
-  boxShadow: "0 16px 36px rgba(15, 23, 42, 0.06)",
+  boxShadow: "0 14px 30px rgba(15, 23, 42, 0.05)",
 };
 
 const panelHeader = {
@@ -736,7 +907,7 @@ const table = {
 
 const tableHead = {
   display: "grid",
-  gridTemplateColumns: "1.4fr 1fr 0.8fr 0.7fr",
+  gridTemplateColumns: "1.4fr 1fr 0.8fr 1fr",
   gap: "12px",
   padding: "0 14px 8px",
   color: "#9ca3af",
@@ -748,7 +919,7 @@ const tableHead = {
 
 const tableRow = {
   display: "grid",
-  gridTemplateColumns: "1.4fr 1fr 0.8fr 0.7fr",
+  gridTemplateColumns: "1.4fr 1fr 0.8fr 1fr",
   gap: "12px",
   alignItems: "center",
   padding: "14px",
@@ -768,24 +939,10 @@ const tableText = {
   fontSize: "14px",
 };
 
-const publishedBadge = {
-  width: "fit-content",
-  padding: "6px 10px",
-  borderRadius: "999px",
-  background: "#ecfdf5",
-  color: "#059669",
-  fontSize: "12px",
-  fontWeight: "800",
-};
-
-const draftBadge = {
-  width: "fit-content",
-  padding: "6px 10px",
-  borderRadius: "999px",
-  background: "#fff7ed",
-  color: "#ea580c",
-  fontSize: "12px",
-  fontWeight: "800",
+const rowActions = {
+  display: "flex",
+  gap: "8px",
+  justifyContent: "flex-end",
 };
 
 const rowButton = {
@@ -797,6 +954,25 @@ const rowButton = {
   cursor: "pointer",
   fontWeight: "700",
   fontSize: "13px",
+};
+
+const rowButtonLight = {
+  border: "1px solid #e5e7eb",
+  background: "#ffffff",
+  color: "#374151",
+  padding: "9px 10px",
+  borderRadius: "11px",
+  cursor: "pointer",
+  fontWeight: "700",
+  fontSize: "13px",
+};
+
+const emptyState = {
+  padding: "18px",
+  borderRadius: "16px",
+  background: "#f9fafb",
+  color: "#6b7280",
+  border: "1px dashed #d1d5db",
 };
 
 const activityList = {
@@ -854,7 +1030,7 @@ const progressFill = {
 const highlightPanel = {
   background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
   color: "#ffffff",
-  borderRadius: "26px",
+  borderRadius: "24px",
   padding: "24px",
   boxShadow: "0 18px 40px rgba(79, 70, 229, 0.3)",
 };

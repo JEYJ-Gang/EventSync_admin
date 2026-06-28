@@ -20,6 +20,7 @@ export default function EventsPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -67,12 +68,14 @@ export default function EventsPage() {
 
   function openCreateForm() {
     setEditingEvent(null);
+    setIsEditing(false);
     setForm(emptyForm);
     setShowForm(true);
   }
 
   function openEditForm(event) {
     setEditingEvent(event);
+    setIsEditing(true);
 
     setForm({
       title: event.title || "",
@@ -87,6 +90,7 @@ export default function EventsPage() {
 
   function closeForm() {
     setShowForm(false);
+    setIsEditing(false);
     setEditingEvent(null);
     setForm(emptyForm);
     setError("");
@@ -276,90 +280,91 @@ export default function EventsPage() {
                   {saving
                     ? "Enregistrement..."
                     : editingEvent
-                    ? "Modifier"
-                    : "Créer"}
+                      ? "Modifier"
+                      : "Créer"}
                 </button>
               </div>
             </form>
           </section>
         )}
 
-        <section style={panel}>
-          <div style={panelHeader}>
-            <div>
-              <h2 style={panelTitle}>Liste des événements</h2>
-              <p style={panelText}>
-                {events.length} événement(s) trouvé(s) dans la base.
-              </p>
-            </div>
-          </div>
-
-          {events.length === 0 ? (
-            <div style={emptyState}>
-              Aucun événement trouvé. Cliquez sur “Nouvel événement” pour en créer un.
-            </div>
-          ) : (
-            <div style={table}>
-              <div style={tableHead}>
-                <span>Titre</span>
-                <span>Lieu</span>
-                <span>Début</span>
-                <span>Fin</span>
-                <span>Actions</span>
+        {!isEditing && (
+          <section style={panel}>
+            <div style={panelHeader}>
+              <div>
+                <h2 style={panelTitle}>Liste des événements</h2>
+                <p style={panelText}>
+                  {events.length} événement(s) trouvé(s) dans la base.
+                </p>
               </div>
-
-              {events.map((event) => {
-                const eventId = getEventId(event);
-
-                return (
-                  <div style={tableRow} key={eventId}>
-                    <div>
-                      <p style={eventTitle}>{event.title}</p>
-                      <p style={eventDescription}>
-                        {event.description || "Aucune description"}
-                      </p>
-                    </div>
-
-                    <span style={tableText}>
-                      {event.location || "Non défini"}
-                    </span>
-
-                    <span style={tableText}>
-                      {formatDate(event.start_date || event.date_start)}
-                    </span>
-
-                    <span style={tableText}>
-                      {formatDate(event.end_date || event.date_end)}
-                    </span>
-
-                    <div style={actions}>
-                      <button
-                        style={viewButton}
-                        onClick={() => navigate(`/events/${eventId}`)}
-                      >
-                        Voir
-                      </button>
-
-                      <button
-                        style={editButton}
-                        onClick={() => openEditForm(event)}
-                      >
-                        Modifier
-                      </button>
-
-                      <button
-                        style={deleteButton}
-                        onClick={() => handleDelete(event)}
-                      >
-                        Supprimer
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
             </div>
-          )}
-        </section>
+
+            {events.length === 0 ? (
+              <div style={emptyState}>
+                Aucun événement trouvé. Cliquez sur “Nouvel événement” pour en créer un.
+              </div>
+            ) : (
+              <div style={table}>
+                <div style={tableHead}>
+                  <span>Titre</span>
+                  <span>Lieu</span>
+                  <span>Début</span>
+                  <span>Fin</span>
+                  <span>Actions</span>
+                </div>
+
+                {events.map((event) => {
+                  const eventId = getEventId(event);
+
+                  return (
+                    <div style={tableRow} key={eventId}>
+                      <div>
+                        <p style={eventTitle}>{event.title}</p>
+                        <p style={eventDescription}>
+                          {event.description || "Aucune description"}
+                        </p>
+                      </div>
+
+                      <span style={tableText}>
+                        {event.location || "Non défini"}
+                      </span>
+
+                      <span style={tableText}>
+                        {formatDate(event.start_date || event.date_start)}
+                      </span>
+
+                      <span style={tableText}>
+                        {formatDate(event.end_date || event.date_end)}
+                      </span>
+
+                      <div style={actions}>
+                        <button
+                          style={viewButton}
+                          onClick={() => navigate(`/events/${eventId}`)}
+                        >
+                          Voir
+                        </button>
+
+                        <button
+                          style={editButton}
+                          onClick={() => openEditForm(event)}
+                        >
+                          Modifier
+                        </button>
+
+                        <button
+                          style={deleteButton}
+                          onClick={() => handleDelete(event)}
+                        >
+                          Supprimer
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>)}
       </section>
     </main>
   );

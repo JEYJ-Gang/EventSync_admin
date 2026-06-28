@@ -113,18 +113,20 @@ export default function Login() {
 
 const page = {
   minHeight: "100vh",
+  width: "100%",
   background: "#F7F6F0",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   padding: "24px",
   fontFamily: "Inter, Arial, sans-serif",
+  overflow: "hidden",
 };
 
 const card = {
   width: "100%",
   maxWidth: "1040px",
-  minHeight: "650px",
+  height: "min(720px, calc(100vh - 48px))",
   background: "#FEFEFE",
   borderRadius: "32px",
   border: "1px solid #E0DED4",

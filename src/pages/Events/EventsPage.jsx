@@ -6,6 +6,8 @@ const emptyForm = {
   title: "",
   description: "",
   location: "",
+  id_room: "",
+  id_speaker: "",
   start_date: "",
   end_date: "",
 };
@@ -21,6 +23,8 @@ export default function EventsPage() {
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [rooms, setRooms] = useState([]);
+  const [speakers, setSpeakers] = useState([]);
 
   useEffect(() => {
     const token = localStorage.getItem("token");
@@ -81,6 +85,8 @@ export default function EventsPage() {
       title: event.title || "",
       description: event.description || "",
       location: event.location || "",
+      id_room: event.room || "",
+      id_speaker: event.speaker || "",
       start_date: toDatetimeLocal(event.start_date || event.date_start),
       end_date: toDatetimeLocal(event.end_date || event.date_end),
     });
@@ -117,6 +123,8 @@ export default function EventsPage() {
         title: form.title,
         description: form.description,
         location: form.location,
+        id_room: form.id_room,
+        id_speaker: form.id_speaker,
         start_date: new Date(form.start_date).toISOString(),
         end_date: new Date(form.end_date).toISOString(),
       };
@@ -250,6 +258,51 @@ export default function EventsPage() {
               </div>
 
               <div>
+                <label style={label}>Salle</label>
+
+                <input
+                  style={input}
+                  name="id_room"
+                  value={form.id_room}
+                  onChange={handleChange}
+                  list="rooms-list"
+                  placeholder="Ex : Salle B"
+                />
+
+                <datalist id="rooms-list">
+                  {rooms.map((room) => (
+                    <option key={room.id_room} value={room.id_room}>
+                      {room.name}
+                    </option>
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
+                <label style={label}>Intervenant</label>
+
+                <input
+                  style={input}
+                  name="id_speaker"
+                  value={form.id_speaker}
+                  onChange={handleChange}
+                  list="speakers-list"
+                  placeholder="Ex : Jean"
+                />
+
+                <datalist id="speakers-list">
+                  {speakers.map((speaker) => (
+                    <option
+                      key={speaker.id_speaker}
+                      value={speaker.id_speaker}
+                    >
+                      {speaker.first_name} {speaker.last_name}
+                    </option>
+                  ))}
+                </datalist>
+              </div>
+
+              <div>
                 <label style={label}>Date de début</label>
                 <input
                   style={input}
@@ -288,7 +341,7 @@ export default function EventsPage() {
           </section>
         )}
 
-        {!isEditing && (
+        {!showForm && (
           <section style={panel}>
             <div style={panelHeader}>
               <div>

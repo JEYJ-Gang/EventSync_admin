@@ -361,6 +361,8 @@ export default function EventsPage() {
                 <div style={tableHead}>
                   <span>Titre</span>
                   <span>Lieu</span>
+                  <span>Salle</span>
+                  <span>Intervenant</span>
                   <span>Début</span>
                   <span>Fin</span>
                   <span>Actions</span>
@@ -380,6 +382,16 @@ export default function EventsPage() {
 
                       <span style={tableText}>
                         {event.location || "Non défini"}
+                      </span>
+
+                      <span style={tableText}>
+                        {event.room?.name || "Aucune salle"}
+                      </span>
+
+                      <span style={tableText}>
+                        {event.speaker
+                          ? `${event.speaker.first_name} ${event.speaker.last_name}`
+                          : "Aucun intervenant"}
                       </span>
 
                       <span style={tableText}>
@@ -452,10 +464,11 @@ function toDatetimeLocal(date) {
 const page = {
   minHeight: "100vh",
   width: "100%",
-  background: "#f4f6fb",
-  color: "#111827",
-  fontFamily: "Inter, Arial, sans-serif",
-  padding: "32px",
+  background: "linear-gradient(135deg, #f4f6fb 0%, #eef2ff 100%)",
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  padding: "40px",
 };
 
 const container = {
@@ -647,7 +660,7 @@ const table = {
 
 const tableHead = {
   display: "grid",
-  gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1.2fr",
+  gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1.4fr 1.2fr",
   gap: "12px",
   padding: "0 14px 8px",
   color: "#9ca3af",
@@ -659,7 +672,7 @@ const tableHead = {
 
 const tableRow = {
   display: "grid",
-  gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1.2fr",
+  gridTemplateColumns: "1.4fr 1fr 1fr 1fr 1.4fr 1.2fr",
   gap: "12px",
   alignItems: "center",
   padding: "16px 14px",
@@ -687,8 +700,9 @@ const tableText = {
 
 const actions = {
   display: "flex",
-  gap: "8px",
-  flexWrap: "wrap",
+  justifyContent: "center",
+  alignItems: "center",
+  gap: "12px",
 };
 
 const viewButton = {

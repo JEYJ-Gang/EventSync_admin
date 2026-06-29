@@ -1,33 +1,55 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function SpeakersPage() {
+const navigate = useNavigate();
   const [speakers, setSpeakers] = useState([]);
-const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-useEffect(() => {
-  async function loadSpeakers() {
-    try {
-      const res = await fetch("/api/speaker"); // ou /api/speakers selon ton backend
-      const json = await res.json();
+  useEffect(() => {
+    async function loadSpeakers() {
+      try {
+        const res = await fetch("/api/speaker"); // ou /api/speakers selon ton backend
+        const json = await res.json();
 
-      setSpeakers(json.data ?? []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
+        setSpeakers(json.data ?? []);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
     }
+
+    loadSpeakers();
+  }, []);
+  if (loading) {
+    return (
+      <div style={{ padding: "40px" }}>
+        Chargement des intervenants...
+      </div>
+    );
   }
 
-  loadSpeakers();
-}, []);
-if (loading) {
-  return (
-    <div style={{ padding: "40px" }}>
-      Chargement des intervenants...
-    </div>
-  );
+  async function handleDelete(id) {
+  const confirmDelete = confirm("Supprimer cet intervenant ?");
+
+  if (!confirmDelete) return;
+
+  try {
+    await fetch(`/api/speaker/${id}`, {
+      method: "DELETE",
+    });
+
+    // refresh UI
+    setSpeakers((prev) =>
+      prev.filter((sp) => sp.id_speaker !== id)
+    );
+  } catch (err) {
+    console.error(err);
+    alert("Erreur suppression speaker");
+  }
 }
   return (
     <main style={pageStyle}>
@@ -78,19 +100,31 @@ if (loading) {
               {/* ACTIONS */}
               <div style={actions}>
 
-                <button style={viewBtn}>
-                  Voir
-                </button>
+  {/* 👁 Voir */}
+  <button
+    style={viewBtn}
+    onClick={() => navigate.push(`/speakers/${sp.id_speaker}`)}
+  >
+    Voir
+  </button>
 
-                <button style={editBtn}>
-                  Modifier
-                </button>
+  {/* ✏️ Modifier */}
+  <button
+    style={editBtn}
+    onClick={() => navigate.push(`/speakers/edit/${sp.id_speaker}`)}
+  >
+    Modifier
+  </button>
 
-                <button style={deleteBtn}>
-                  Supprimer
-                </button>
+  {/* 🗑 Supprimer */}
+  <button
+    style={deleteBtn}
+    onClick={() => handleDelete(sp.id_speaker)}
+  >
+    Supprimer
+  </button>
 
-              </div>
+</div>
 
             </div>
           ))}
